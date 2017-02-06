@@ -5,7 +5,7 @@ This module provides an easy to use API for using with TrueWallet.
 
 ##### Creating new instance
 
-```ecmascript 6
+```
 const tw = new TrueWallet({
     email: 'email@example.com',
     password: 'theBestPasswordInTheWorld'
@@ -14,13 +14,13 @@ const tw = new TrueWallet({
 
 ##### Logging in
 
-```ecmascript 6
+```
 tw.login()
 ```
 
 ##### Getting transactions history
 
-```ecmascript 6
+```
 tw.history()
     .then((transactions) => {
         console.log(transactions) // prints all transactions to the console
@@ -29,7 +29,7 @@ tw.history()
 
 ##### Getting transaction details
 
-```ecmascript 6
+```
 transaction.details()
     .then((details) => {
         console.log(details) // prints all details to the console
