@@ -1,8 +1,8 @@
 const TrueWallet = require('../')
 
 const tw = new TrueWallet({
-    email: 'email@example.com',
-    password: 'theBestPasswordInTheWorld'
+    email: process.env.TW_EMAIL || 'email@example.com',
+    password: process.env.TW_PASSWORD || 'example'
 })
 
 const handleTransactions = (activities) => {

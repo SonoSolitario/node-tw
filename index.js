@@ -1,25 +1,45 @@
 const request = require('request')
 const assert = require("assert")
+const EventEmitter = require('events');
+const fs = require('fs')
 
 const host = 'https://wallet.truemoney.com'
 
-module.exports = class TrueWallet {
+module.exports = class TrueWallet extends EventEmitter {
 
     constructor(options) {
+        super()
+
         this.logged = false
         this.jar = request.jar()
-        this.options = {}
+        this.options = {
+            pollInterval: 60000
+        }
+        this.transactionHistory = null
         this.validateOptions(options)
-        this.login = this.login.bind(this);
-        this.history = this.history.bind(this);
+        this.login = this.login.bind(this)
+        this.history = this.history.bind(this)
+        this.startPolling = this.startPolling.bind(this)
+        this.appendHistory = this.appendHistory.bind(this)
+        this.poll = this.poll.bind(this)
+        this.filterExists = this.filterExists.bind(this)
+        this.processPollResult = this.processPollResult.bind(this)
     }
 
     validateOptions(options) {
-        assert(options != null)
-        assert(options.email != null)
-        assert(options.password != null)
+        assert(options != null, 'Options are required')
+        assert(options.email != null, 'Email is required')
+        assert(options.password != null, 'Password is required')
         this.options.email = options.email
         this.options.password = options.password
+        if (options.pollInterval) {
+            this.options.pollInterval = options.pollInterval
+        }
+        if (options.cacheFile) {
+            assert(fs.existsSync(options.cacheFile), 'Cache file doesn\'t exist')
+            this.options.cacheFile = options.cacheFile
+            this.transactionHistory = JSON.parse(fs.readFileSync(this.options.cacheFile))
+        }
     }
 
     login() {
@@ -120,5 +140,61 @@ module.exports = class TrueWallet {
                 })
             })
         })
+    }
+
+    startPolling() {
+        return new Promise((resolve, reject) => {
+            if (!this.logged) {
+                return reject('Not logged in')
+            }
+            if (this.transactionHistory == null) {
+                this.history()
+                    .then(TrueWallet.extractID)
+                    .then(result => {
+                        this.transactionHistory = result
+                        this.poll()
+                        resolve()
+                    })
+            } else {
+                this.poll()
+                resolve()
+            }
+        })
+    }
+
+    poll() {
+        this.history()
+            .then(this.filterExists)
+            .then(this.processPollResult)
+            .then(() => {
+                setTimeout(this.poll, this.options.pollInterval)
+            })
+    }
+
+    processPollResult(transactions) {
+        this.appendHistory(TrueWallet.extractID(transactions))
+        if (this.options.cacheFile) {
+            fs.writeFile(this.options.cacheFile, JSON.stringify(this.transactionHistory))
+        }
+        transactions.forEach(transaction => {
+            this.emit('transaction', transaction)
+        })
+    }
+
+    appendHistory(data) {
+        if (data instanceof Array) {
+            this.transactionHistory = this.transactionHistory.concat(data)
+        } else {
+            this.transactionHistory.push(data)
+        }
+        return data
+    }
+
+    filterExists(transactions) {
+        return transactions.filter(transaction => !this.transactionHistory.includes(transaction.reportID))
+    }
+
+    static extractID(transactions) {
+        return transactions.map(transaction => transaction.reportID)
     }
 }
