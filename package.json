@@ -1,14 +1,21 @@
 {
   "name": "node-tw",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "",
-  "main": "index.js",
+  "main": "./lib/index.min.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "compile": "babel --source-maps -d lib/ src/",
+    "minify": "uglifyjs lib/index.js --compress --preamble '//node-tw, MIT, https://github.com/paphonbth/node-tw' --source-map lib/index.min.js.map --in-source-map lib/index.js.map --mangle -o lib/index.min.js",
+    "prepublish": "npm run compile && npm run minify"
   },
   "author": "paphonb",
   "license": "MIT",
   "dependencies": {
     "request": "^2.79.0"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.23.0",
+    "babel-preset-es2015": "^6.22.0",
+    "uglify-js": "^2.7.5"
   }
 }
